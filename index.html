@@ -1,0 +1,169 @@
+
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Počítač úspěšnosti</title>
+    <script src="http://www.matyhoweb.xf.cz/addestroyer.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background: #f0f0f0;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007BFF;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        p {
+            font-size: 18px;
+            color: #555;
+        }
+
+        span {
+            font-weight: bold;
+            color: #333;
+        }
+
+        #chartContainer {
+            width: 80%;
+            max-width: 600px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let successCount = 0;
+        let failureCount = 0;
+        let history = [];
+        let successRates = [];
+        let chart;
+
+        function calculateSuccessRate() {
+            const total = successCount + failureCount;
+            if (total === 0) return 0;
+            return (successCount / total) * 100;
+        }
+
+        function updateDisplay() {
+            const successRate = calculateSuccessRate();
+            const totalCount = successCount + failureCount;
+            document.getElementById('successRate').innerText = successRate.toFixed(2) + '%';
+            document.getElementById('totalCount').innerText = totalCount;
+            updateChart();
+        }
+
+        function handleSuccess() {
+            successCount++;
+            history.push('success');
+            successRates.push(calculateSuccessRate());
+            updateDisplay();
+        }
+
+        function handleFailure() {
+            failureCount++;
+            history.push('failure');
+            successRates.push(calculateSuccessRate());
+            updateDisplay();
+        }
+
+        function handleUndo() {
+            const lastAction = history.pop();
+            if (lastAction === 'success') {
+                successCount--;
+            } else if (lastAction === 'failure') {
+                failureCount--;
+            }
+            successRates.push(calculateSuccessRate());
+            updateDisplay();
+        }
+
+        function createChart() {
+            const ctx = document.getElementById('successChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: successRates.map((_, index) => index + 1),
+                    datasets: [{
+                        label: 'Procentuální úspěšnost',
+                        data: successRates,
+                        borderColor: 'rgba(0, 123, 255, 1)',
+                        backgroundColor: 'rgba(0, 123, 255, 0.2)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Počet akcí'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Úspěšnost (%)'
+                            },
+                            min: 0,
+                            max: 100
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            chart.data.labels = successRates.map((_, index) => index + 1);
+            chart.data.datasets[0].data = successRates;
+            chart.update();
+        }
+
+        function downloadChart() {
+            const link = document.createElement('a');
+            link.href = chart.toBase64Image();
+            link.download = 'success-rate-chart.png';
+            link.click();
+        }
+
+        window.onload = () => {
+            createChart();
+        };
+    </script>
+</head>
+<body>
+    <h1>Počítač uspěšnosti</h1>
+    <button onclick="handleSuccess()">Úspěch</button>
+    <button onclick="handleFailure()">Neúspěch</button>
+    <button onclick="handleUndo()">Krok zpět</button>
+    <button onclick="downloadChart()">Stáhnout graf</button>
+    <p>Procentuální úspěšnost: <span id="successRate">0.00%</span></p>
+    <p>Celkový počet stisknutí: <span id="totalCount">0</span></p>
+    <div id="chartContainer">
+        <canvas id="successChart"></canvas>
+    </div>
+</body>
+</html>
